@@ -1,0 +1,68 @@
+import numpy as np
+import cv2
+import matplotlib.pyplot as plt
+
+# Load the grayscale image
+image = cv2.imread('image.tif', 0)  # Replace 'image.jpg' with your image file
+if image is None:
+    raise FileNotFoundError("Image not found. Please provide a valid file path.")
+
+# Step 1: Define the Ideal Low-Pass Filter
+def ideal_low_pass_filter(shape, D0):
+    P, Q = shape
+    u = np.arange(P) - P // 2
+    v = np.arange(Q) - Q // 2
+    U, V = np.meshgrid(u, v)
+    D = np.sqrt(U**2 + V**2)
+    H = np.zeros_like(D)
+    H[D <= D0] = 1  # Pass frequencies within radius D0
+    return np.fft.ifftshift(H)
+
+# Step 2: Apply the filter
+def apply_filter(image, filter_mask):
+    # Compute the DFT of the image
+    dft = np.fft.fft2(image)
+    dft_shift = np.fft.fftshift(dft)
+
+    # Apply the filter in the frequency domain
+    filtered_dft = dft_shift * filter_mask
+
+    # Perform inverse DFT to return to the spatial domain
+    filtered_image = np.fft.ifft2(np.fft.ifftshift(filtered_dft)).real
+    return filtered_image
+
+# Step 3: Visualize Results with Different D0
+def visualize_results(image, radii):
+    plt.figure(figsize=(15, 10))
+
+    # Plot original image
+    plt.subplot(2, len(radii) + 1, 1)
+    plt.title("Original Image")
+    plt.imshow(image, cmap='gray')
+    plt.axis('off')
+
+    # Apply filters and plot results
+    for i, D0 in enumerate(radii, 2):
+        filter_mask = ideal_low_pass_filter(image.shape, D0)
+        filtered_image = apply_filter(image, filter_mask)
+
+        # Plot filtered image
+        plt.subplot(2, len(radii) + 1, i)
+        plt.title(f"D0 = {D0}")
+        plt.imshow(filtered_image, cmap='gray')
+        plt.axis('off')
+
+        # Plot filter in frequency domain
+        plt.subplot(2, len(radii) + 1, i + len(radii))
+        plt.title(f"Filter (D0 = {D0})")
+        plt.imshow(filter_mask, cmap='gray')
+        plt.axis('off')
+
+    plt.tight_layout()
+    plt.show()
+
+# Define radii for the ideal low-pass filter
+radii = [10, 30, 60, 100]
+
+# Visualize results
+visualize_results(image, radii)

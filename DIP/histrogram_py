@@ -1,0 +1,76 @@
+import numpy as np
+import cv2
+import matplotlib.pyplot as plt
+
+# Load the grayscale image
+image = cv2.imread('image.tif', 0)  # Replace 'image.jpg' with your image file
+if image is None:
+    raise FileNotFoundError("Image not found. Please provide a valid file path.")
+
+# Step 1: Calculate the histogram
+def calculate_histogram(image):
+    hist = np.zeros(256, dtype=int)
+    for pixel_value in image.ravel(): # Flattens the image into a 1D array for easy iteration
+        hist[pixel_value] += 1
+    return hist
+
+
+
+# Step 2: Calculate the cumulative distribution function (CDF)
+def calculate_cdf(hist):
+    cdf = np.cumsum(hist)
+    cdf_normalized = (cdf - cdf.min()) / (cdf.max() - cdf.min()) * 255
+    return cdf_normalized.astype('uint8')
+
+# Step 3: Map pixel values based on the CDF
+def equalize_image(image, cdf):
+    equalized_image = np.zeros_like(image, dtype='uint8')
+    rows, cols = image.shape
+    for i in range(rows):
+        for j in range(cols):
+            equalized_image[i, j] = cdf[image[i, j]]
+    return equalized_image
+
+# Calculate histogram and CDF
+histogram = calculate_histogram(image)
+cdf = calculate_cdf(histogram)
+
+# Perform histogram equalization
+equalized_image = equalize_image(image, cdf)
+
+# Step 4: Plot Original and Equalized Images and Histograms
+def plot_results(image, equalized_image, histogram, cdf):
+    plt.figure(figsize=(12, 8))
+
+    # Original Image
+    plt.subplot(2, 2, 1)
+    plt.title('Original Image')
+    plt.imshow(image, cmap='gray')
+    plt.axis('off')
+
+    # Histogram of Original Image
+    plt.subplot(2, 2, 2)
+    plt.title('Original Histogram')
+    plt.bar(range(256), histogram, color='black', width=1)
+    plt.xlabel('Pixel Intensity')
+    plt.ylabel('Frequency')
+
+    # Equalized Image
+    plt.subplot(2, 2, 3)
+    plt.title('Equalized Image')
+    plt.imshow(equalized_image, cmap='gray')
+    plt.axis('off')
+
+    # Histogram of Equalized Image
+    plt.subplot(2, 2, 4)
+    plt.title('Equalized Histogram')
+    equalized_hist = calculate_histogram(equalized_image)
+    plt.bar(range(256), equalized_hist, color='black', width=1)
+    plt.xlabel('Pixel Intensity')
+    plt.ylabel('Frequency')
+
+    plt.tight_layout()
+    plt.show()
+
+# Plot results
+plot_results(image, equalized_image, histogram, cdf)
